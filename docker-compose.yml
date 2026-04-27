@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: lumidb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lumidb
+      POSTGRES_USER: lumi
+      POSTGRES_PASSWORD: lumipass
+    volumes:
+      - ./database/create_tables.sql:/docker-entrypoint-initdb.d/01_tables.sql:ro
+      - ./database/create_triggers_and_procedure.sql:/docker-entrypoint-initdb.d/02_triggers.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/03_seed.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lumi -d lumidb"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lumi-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: lumidb
+      DB_USER: lumi
+      DB_PASS: lumipass
+      JWT_SECRET: lumi_net_jewelry_2025_secret_key
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: nginx:alpine
+    container_name: lumi-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
