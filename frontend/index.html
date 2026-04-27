@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LUMI·NET — Ювелирная сеть</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c9a84c;--gold-light:#e8d5a3;--gold-dark:#8a6f2e;
+  --obsidian:#0d0d0d;--ink:#1a1a1a;--charcoal:#2c2c2c;--ash:#4a4a4a;
+  --smoke:#7a7a7a;--silver:#b0b0b0;--pearl:#e8e4dc;--cream:#f5f0e8;--white:#fafafa;
+  --success:#4a7c59;--danger:#8b2e2e;--warning:#8a6f2e;--info:#2e5f8a;
+  --radius:2px;--radius-lg:4px;--shadow:0 2px 16px rgba(0,0,0,.15);
+  --transition:.18s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);font-size:14px;line-height:1.5}
+/* ── LAYOUT ── */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:230px;background:var(--obsidian);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s}
+#sidebar.collapsed{width:56px}
+.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid #222;flex-shrink:0}
+.logo-full{display:flex;align-items:baseline;gap:6px}
+.logo-full span:first-child{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--gold);letter-spacing:.1em}
+.logo-full span:last-child{font-size:10px;color:var(--smoke);letter-spacing:.15em;text-transform:uppercase}
+.sidebar-collapsed #sidebar .logo-full{display:none}
+nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-section{padding:8px 14px 4px;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--ash);font-weight:500}
+#sidebar.collapsed .nav-section{display:none}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;color:var(--silver);cursor:pointer;transition:all var(--transition);border-left:2px solid transparent;text-decoration:none;font-size:13px;white-space:nowrap;overflow:hidden}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--gold-light)}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:rgba(201,168,76,.08)}
+.nav-icon{font-size:16px;flex-shrink:0;width:18px;text-align:center}
+#sidebar.collapsed .nav-item span:last-child{display:none}
+.sidebar-footer{padding:12px;border-top:1px solid #222}
+.user-card{display:flex;align-items:center;gap:8px;padding:8px;background:#1a1a1a;border-radius:var(--radius)}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--gold-dark);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--cream);font-weight:600;flex-shrink:0}
+.user-info{overflow:hidden}
+.user-name{font-size:12px;color:var(--pearl);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:var(--smoke)}
+#sidebar.collapsed .user-info{display:none}
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:52px;background:var(--white);border-bottom:1px solid #e0d8cc;display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+#toggle-sidebar{background:none;border:none;cursor:pointer;font-size:18px;color:var(--ash);padding:6px;border-radius:var(--radius)}
+#topbar-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--ink);flex:1}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+#page{flex:1;overflow-y:auto;padding:24px}
+/* ── AUTH ── */
+#auth-screen{position:fixed;inset:0;background:var(--obsidian);display:flex;align-items:center;justify-content:center;z-index:1000}
+.auth-box{background:var(--ink);border:1px solid #333;border-radius:var(--radius-lg);padding:40px;width:360px}
+.auth-title{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold);text-align:center;margin-bottom:6px}
+.auth-sub{text-align:center;color:var(--smoke);font-size:12px;margin-bottom:28px;letter-spacing:.05em}
+/* ── COMPONENTS ── */
+.card{background:var(--white);border:1px solid #e0d8cc;border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.card-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--white);border:1px solid #e0d8cc;border-radius:var(--radius-lg);padding:16px 18px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--gold)}
+.stat-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--ink);line-height:1}
+.stat-label{font-size:11px;color:var(--smoke);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.stat-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:26px;opacity:.15}
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--cream)}
+th{padding:9px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ash);border-bottom:2px solid #e0d8cc;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0ebe0;color:var(--charcoal);vertical-align:middle}
+tr:hover td{background:rgba(201,168,76,.04)}
+tr:last-child td{border-bottom:none}
+.td-actions{display:flex;gap:6px;align-items:center}
+/* ── FORMS ── */
+.form-group{margin-bottom:14px}
+label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ash);margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;padding:9px 12px;border:1px solid #d0c8ba;border-radius:var(--radius);background:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);transition:border var(--transition);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all var(--transition);text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--gold);color:var(--obsidian)}
+.btn-primary:hover{background:var(--gold-dark);color:var(--cream)}
+.btn-outline{background:transparent;border:1px solid var(--gold);color:var(--gold)}
+.btn-outline:hover{background:var(--gold);color:var(--obsidian)}
+.btn-ghost{background:transparent;border:1px solid #d0c8ba;color:var(--ash)}
+.btn-ghost:hover{border-color:var(--ash);color:var(--ink)}
+.btn-danger{background:transparent;border:1px solid var(--danger);color:var(--danger)}
+.btn-danger:hover{background:var(--danger);color:var(--white)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-success{background:#e8f4ec;color:var(--success)}
+.badge-warning{background:#faf3e0;color:var(--warning)}
+.badge-danger{background:#fae8e8;color:var(--danger)}
+.badge-info{background:#e8f0fa;color:var(--info)}
+.badge-gold{background:rgba(201,168,76,.15);color:var(--gold-dark)}
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--white);border-radius:var(--radius-lg);padding:28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;transform:translateY(12px);transition:transform .2s;box-shadow:var(--shadow)}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--smoke);padding:4px;line-height:1}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #e0d8cc}
+/* ── STARS ── */
+.stars{color:var(--gold);font-size:14px;letter-spacing:1px}
+/* ── FILTERS BAR ── */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-group label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--smoke)}
+.filter-group input,.filter-group select{width:auto;min-width:140px;padding:7px 10px}
+/* ── ALERTS ── */
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:12px}
+.alert-err{background:#fae8e8;color:var(--danger);border-left:3px solid var(--danger)}
+.alert-ok {background:#e8f4ec;color:var(--success);border-left:3px solid var(--success)}
+/* ── PAGINATION ── */
+.pagination{display:flex;gap:4px;align-items:center;margin-top:12px;justify-content:flex-end}
+.page-btn{padding:5px 10px;border:1px solid #d0c8ba;background:var(--white);border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--ash)}
+.page-btn.active{background:var(--gold);border-color:var(--gold);color:var(--obsidian);font-weight:600}
+.page-btn:hover:not(.active){border-color:var(--gold);color:var(--gold)}
+/* ── CHART ── */
+.chart-bar-wrap{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.chart-bar-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.chart-bar-label{width:120px;text-align:right;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-bar-track{flex:1;background:#f0ebe0;border-radius:2px;height:18px;overflow:hidden}
+.chart-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:2px;transition:width .5s ease;display:flex;align-items:center;padding-left:6px;font-size:11px;color:var(--obsidian);font-weight:500}
+.chart-bar-val{width:90px;color:var(--ink);font-weight:500;font-size:12px}
+/* ── MISC ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--smoke)}
+.empty-state .esi{font-size:36px;margin-bottom:10px}
+.empty-state p{font-size:14px}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400}
+.separator{border:none;border-top:1px solid #e0d8cc;margin:20px 0}
+.tag{display:inline-block;padding:2px 8px;background:var(--cream);border:1px solid #d0c8ba;border-radius:var(--radius);font-size:11px;color:var(--ash)}
+.items-list{display:flex;flex-direction:column;gap:6px}
+.item-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--cream);border-radius:var(--radius);font-size:13px}
+.item-row-del{cursor:pointer;color:var(--smoke);padding:2px 6px;font-size:16px;line-height:1}
+.item-row-del:hover{color:var(--danger)}
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  #sidebar{width:56px}
+  #sidebar .nav-item span:last-child{display:none}
+  #sidebar .nav-section,.sidebar-footer .user-info,.logo-full span:last-child{display:none}
+  #page{padding:14px}
+}
+</style>
+</head>
+<body>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-title">LUMI·NET</div>
+    <div class="auth-sub">Управление ювелирной сетью</div>
+    <div id="auth-err"></div>
+    <div id="auth-login-form">
+      <div class="form-group"><label>Логин</label><input id="au-user" type="text" placeholder="username" autocomplete="username"></div>
+      <div class="form-group"><label>Пароль</label><input id="au-pass" type="password" placeholder="••••••" autocomplete="current-password"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="doLogin()">Войти</button>
+      <div style="margin-top:14px;text-align:center;font-size:12px;color:#555">
+        Нет аккаунта? <a href="#" onclick="showRegForm()" style="color:var(--gold)">Зарегистрироваться</a>
+      </div>
+    </div>
+    <div id="auth-reg-form" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>ФИО</label><input id="ru-fio" type="text" placeholder="Фамилия Имя Отчество"></div>
+        <div class="form-group"><label>Телефон</label><input id="ru-phone" type="text" placeholder="+7 (XXX) XXX-XX-XX"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Логин</label><input id="ru-user" type="text" placeholder="username"></div>
+        <div class="form-group"><label>Пароль</label><input id="ru-pass" type="password" placeholder="••••••"></div>
+      </div>
+      <div class="form-group"><label>Email (необязательно)</label><input id="ru-email" type="email" placeholder="email@example.com"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doRegister()">Зарегистрироваться</button>
+      <div style="margin-top:12px;text-align:center;font-size:12px;color:#555">
+        <a href="#" onclick="showLoginForm()" style="color:var(--gold)">← Войти в систему</a>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding:10px;background:#111;border-radius:2px;font-size:11px;color:#555;line-height:1.6">
+      <b style="color:#777">Тестовые аккаунты:</b><br>
+      admin / admin123 &nbsp;|&nbsp; manager1 / pass123<br>
+      cashier1 / pass123 &nbsp;|&nbsp; client1 / pass123
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-full">
+        <span>LUMI·NET</span>
+        <span>Ювелирная сеть</span>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="ua-initials">?</div>
+        <div class="user-info">
+          <div class="user-name" id="ua-name">—</div>
+          <div class="user-role" id="ua-role">—</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+    <div id="topbar">
+      <button id="toggle-sidebar" onclick="toggleSidebar()">☰</button>
+      <div id="topbar-title">Добро пожаловать</div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Выйти</button>
+      </div>
+    </div>
+    <div id="page"><div class="empty-state"><div class="esi">💎</div><p>Выберите раздел в меню</p></div></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalIfBg(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Окно</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
