@@ -13,7 +13,7 @@ void ClientController::getAll(const HttpRequestPtr& req,std::function<void(const
         "ORDER BY client_fio",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["id"]=row["client_id"].as<int>();
                 o["fio"]=row["client_fio"].isNull()?"":row["client_fio"].as<std::string>();
                 o["phone"]=row["client_phone"].as<std::string>();
@@ -28,7 +28,7 @@ void ClientController::getOne(const HttpRequestPtr&,std::function<void(const Htt
         "FROM CLIENT c LEFT JOIN SALE s ON c.client_id=s.client_id WHERE c.client_id=$1 GROUP BY c.client_id",
         [cb](const orm::Result& r){
             if(r.empty())return cb(jsonErr("Клиент не найден",k404NotFound));
-            auto& row=r[0];Json::Value o;
+            const auto row=r[0];Json::Value o;
             o["id"]=row["client_id"].as<int>();
             o["fio"]=row["client_fio"].isNull()?"":row["client_fio"].as<std::string>();
             o["phone"]=row["client_phone"].as<std::string>();

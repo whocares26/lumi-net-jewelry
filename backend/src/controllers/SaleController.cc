@@ -22,7 +22,7 @@ void SaleController::getAll(const HttpRequestPtr& req,std::function<void(const H
         "ORDER BY s.sale_date DESC LIMIT 200",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["id"]=row["sale_id"].as<int>();
                 o["date"]=row["sale_date"].as<std::string>();
                 o["total"]=row["sale_total"].as<double>();
@@ -45,7 +45,7 @@ void SaleController::getOne(const HttpRequestPtr&,std::function<void(const HttpR
         "JOIN CASHIER ca ON s.cashier_snils=ca.cashier_snils WHERE s.sale_id=$1",
         [cb,id](const orm::Result& r){
             if(r.empty())return cb(jsonErr("Продажа не найдена",k404NotFound));
-            auto& row=r[0];Json::Value o;
+            const auto row=r[0];Json::Value o;
             o["id"]=row["sale_id"].as<int>();
             o["date"]=row["sale_date"].as<std::string>();
             o["total"]=row["sale_total"].as<double>();
@@ -53,13 +53,12 @@ void SaleController::getOne(const HttpRequestPtr&,std::function<void(const HttpR
             o["client"]=row["client_fio"].isNull()?"":row["client_fio"].as<std::string>();
             o["store"]=row["store_address"].as<std::string>();
             o["cashier"]=row["cashier_fio"].as<std::string>();
-            // Load items
             app().getDbClient()->execSqlAsync(
                 "SELECT si.sale_item_quantity,p.product_name,p.product_article,p.product_price "
                 "FROM SALE_ITEM si JOIN PRODUCT p ON si.product_article=p.product_article WHERE si.sale_id=$1",
                 [cb,o](const orm::Result& ri) mutable {
                     Json::Value items(Json::arrayValue);
-                    for(auto& row2:ri){Json::Value itm;
+                    for(const auto& row2:ri){Json::Value itm;
                         itm["name"]=row2["product_name"].as<std::string>();
                         itm["article"]=row2["product_article"].as<int>();
                         itm["price"]=row2["product_price"].as<int>();
@@ -80,8 +79,7 @@ void SaleController::create(const HttpRequestPtr& req,std::function<void(const H
     Json::Value items=(*b)["items"];
     if(!items.isArray()||items.empty())return cb(jsonErr("items обязателен и не должен быть пустым"));
     double total=0;
-    for(auto& itm:items) total+=itm["price"].asDouble()*itm["qty"].asInt();
-
+    for(const auto& itm:items) total+=itm["price"].asDouble()*itm["qty"].asInt();
     auto db=app().getDbClient();
     db->execSqlAsync(
         "INSERT INTO SALE(client_id,cashier_snils,store_id,sale_total,sale_payment_method,sale_date) "
@@ -89,7 +87,7 @@ void SaleController::create(const HttpRequestPtr& req,std::function<void(const H
         [cb,items,db](const orm::Result& r){
             int saleId=r[0]["sale_id"].as<int>();
             int itemIdx=1;
-            for(auto& itm:items){
+            for(const auto& itm:items){
                 int art=itm["article"].asInt();int qty=itm["qty"].asInt();
                 db->execSqlAsync(
                     "INSERT INTO SALE_ITEM(sale_id,sale_item_id,product_article,sale_item_quantity) VALUES($1,$2,$3,$4)",
@@ -113,7 +111,7 @@ void SaleController::clientSales(const HttpRequestPtr& req,std::function<void(co
         "GROUP BY s.sale_id,st.store_address ORDER BY s.sale_date DESC",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["id"]=row["sale_id"].as<int>();
                 o["date"]=row["sale_date"].as<std::string>();
                 o["total"]=row["sale_total"].as<double>();

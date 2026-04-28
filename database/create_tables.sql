@@ -274,7 +274,7 @@ alter table "ORDER"
 add constraint FK_ORDER_ORDERS_MANAGER foreign key (manager_snils) references MANAGER (manager_snils)
 on delete restrict on update restrict;
 alter table ORDER_ITEM
-add constraint FK_ORDER_IT_CONTAINS	PRODUCT foreign key (product_article) references PRODUCT (product_article)
+add constraint FK_ORDER_IT_CONTAINS_PRODUCT foreign key (product_article) references PRODUCT (product_article)
 on delete restrict on update restrict;
 
 alter table ORDER_ITEM

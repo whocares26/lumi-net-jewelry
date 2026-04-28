@@ -11,7 +11,7 @@ void StoreController::getAll(const HttpRequestPtr&,std::function<void(const Http
         "FROM STORE s LEFT JOIN MANAGER m ON s.manager_snils=m.manager_snils ORDER BY s.store_id",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["id"]=row["store_id"].as<int>();
                 o["address"]=row["store_address"].as<std::string>();
                 o["phone"]=row["store_phone"].as<std::string>();
@@ -26,8 +26,7 @@ void StoreController::getOne(const HttpRequestPtr&,std::function<void(const Http
         "FROM STORE s LEFT JOIN MANAGER m ON s.manager_snils=m.manager_snils WHERE s.store_id=$1",
         [cb](const orm::Result& r){
             if(r.empty())return cb(jsonErr("Магазин не найден",k404NotFound));
-            auto& row=r[0];
-            Json::Value o;
+            const auto row=r[0];Json::Value o;
             o["id"]=row["store_id"].as<int>();
             o["address"]=row["store_address"].as<std::string>();
             o["phone"]=row["store_phone"].as<std::string>();

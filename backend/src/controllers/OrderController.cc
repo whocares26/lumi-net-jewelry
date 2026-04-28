@@ -22,11 +22,11 @@ void OrderController::getAll(const HttpRequestPtr& req,std::function<void(const 
         "ORDER BY o.order_date DESC",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["id"]=row["order_id"].as<int>();
                 o["date"]=row["order_date"].as<std::string>();
                 o["status"]=row["order_status"].as<std::string>();
-                o["total"]=row["order_total"].as<long long>();
+                o["total"]=static_cast<Json::Int64>(row["order_total"].as<long long>());
                 o["store"]=row["store_address"].as<std::string>();
                 o["supplier"]=row["supplier_name"].as<std::string>();
                 o["manager"]=row["manager_fio"].as<std::string>();
@@ -44,11 +44,11 @@ void OrderController::getOne(const HttpRequestPtr&,std::function<void(const Http
         "JOIN MANAGER m ON o.manager_snils=m.manager_snils WHERE o.order_id=$1",
         [cb,id](const orm::Result& r){
             if(r.empty())return cb(jsonErr("Заказ не найден",k404NotFound));
-            auto& row=r[0];Json::Value o;
+            const auto row=r[0];Json::Value o;
             o["id"]=row["order_id"].as<int>();
             o["date"]=row["order_date"].as<std::string>();
             o["status"]=row["order_status"].as<std::string>();
-            o["total"]=row["order_total"].as<long long>();
+            o["total"]=static_cast<Json::Int64>(row["order_total"].as<long long>());
             o["store"]=row["store_address"].as<std::string>();
             o["supplier"]=row["supplier_name"].as<std::string>();
             o["manager"]=row["manager_fio"].as<std::string>();
@@ -57,7 +57,7 @@ void OrderController::getOne(const HttpRequestPtr&,std::function<void(const Http
                 "FROM ORDER_ITEM oi JOIN PRODUCT p ON oi.product_article=p.product_article WHERE oi.order_id=$1",
                 [cb,o](const orm::Result& ri) mutable {
                     Json::Value items(Json::arrayValue);
-                    for(auto& row2:ri){Json::Value itm;
+                    for(const auto& row2:ri){Json::Value itm;
                         itm["name"]=row2["product_name"].as<std::string>();
                         itm["article"]=row2["product_article"].as<int>();
                         itm["price"]=row2["product_price"].as<int>();
@@ -75,15 +75,12 @@ void OrderController::create(const HttpRequestPtr& req,std::function<void(const 
     int suppId=(*b)["supplier_id"].asInt();
     Json::Value items=(*b)["items"];
     if(!items.isArray()||items.empty())return cb(jsonErr("items required"));
-
-    // Build arrays for stored procedure
     std::string arts="ARRAY[",qtys="ARRAY[";
     for(unsigned i=0;i<items.size();i++){
         if(i)arts+=",",qtys+=",";
         arts+=std::to_string(items[i]["article"].asInt());
         qtys+=std::to_string(items[i]["qty"].asInt());}
     arts+="]::INT[]";qtys+="]::INT[]";
-
     std::string sql="CALL create_supplier_order("+std::to_string(storeId)+","+
                     std::to_string(suppId)+","+arts+","+qtys+",NULL)";
     app().getDbClient()->execSqlAsync(sql,

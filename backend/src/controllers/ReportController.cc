@@ -5,7 +5,6 @@ static HttpResponsePtr cors(HttpResponsePtr r){r->addHeader("Access-Control-Allo
 static HttpResponsePtr jsonErr(const std::string& m,HttpStatusCode c=k400BadRequest){
     Json::Value j;j["error"]=m;auto r=HttpResponse::newHttpJsonResponse(j);r->setStatusCode(c);return cors(r);}
 
-// ── Отчёт 1: Продажи по категориям (запрос №5 из отчёта — WITH CTE)
 void ReportController::salesByCategory(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& cb){
     std::string from=req->getParameter("from"); if(from.empty())from="2024-01-01";
     std::string to  =req->getParameter("to");   if(to.empty())  to  ="2099-12-31";
@@ -29,9 +28,9 @@ void ReportController::salesByCategory(const HttpRequestPtr& req, std::function<
         "FROM cat_sales cs CROSS JOIN total t ORDER BY cs.cat_revenue DESC",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["category"]=row["product_category"].as<std::string>();
-                o["qty"]=row["total_qty"].as<long long>();
+                o["qty"]=static_cast<Json::Int64>(row["total_qty"].as<long long>());
                 o["revenue"]=row["cat_revenue"].as<double>();
                 o["pct"]=row["pct"].as<double>();
                 arr.append(o);}
@@ -40,7 +39,6 @@ void ReportController::salesByCategory(const HttpRequestPtr& req, std::function<
         from,to,cat,storeId);
 }
 
-// ── Отчёт 2: Остатки товаров в магазине
 void ReportController::stockStatus(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& cb){
     std::string storeId=req->getParameter("store_id"); if(storeId.empty())return cb(jsonErr("store_id required"));
     std::string thresh=req->getParameter("threshold"); if(thresh.empty())thresh="9999";
@@ -51,7 +49,7 @@ void ReportController::stockStatus(const HttpRequestPtr& req, std::function<void
         "ORDER BY st.stock_quantity ASC,p.product_name",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["article"]=row["product_article"].as<int>();
                 o["name"]=row["product_name"].as<std::string>();
                 o["category"]=row["product_category"].as<std::string>();
@@ -63,7 +61,6 @@ void ReportController::stockStatus(const HttpRequestPtr& req, std::function<void
         storeId,thresh);
 }
 
-// ── Отчёт 3: Заказы поставщикам
 void ReportController::ordersBySupplier(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& cb){
     std::string suppId=req->getParameter("supplier_id");
     std::string status=req->getParameter("status");
@@ -82,11 +79,11 @@ void ReportController::ordersBySupplier(const HttpRequestPtr& req, std::function
         "ORDER BY o.order_date DESC",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["id"]=row["order_id"].as<int>();
                 o["date"]=row["order_date"].as<std::string>();
                 o["status"]=row["order_status"].as<std::string>();
-                o["total"]=row["order_total"].as<long long>();
+                o["total"]=static_cast<Json::Int64>(row["order_total"].as<long long>());
                 o["supplier"]=row["supplier_name"].as<std::string>();
                 o["store"]=row["store_address"].as<std::string>();
                 o["manager"]=row["manager_fio"].as<std::string>();
@@ -96,7 +93,6 @@ void ReportController::ordersBySupplier(const HttpRequestPtr& req, std::function
         suppId,status,from,to);
 }
 
-// ── Отчёт 4: Выручка по магазинам (запрос №3 из отчёта)
 void ReportController::revenueByStore(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& cb){
     std::string from=req->getParameter("from"); if(from.empty())from="2024-01-01";
     std::string to  =req->getParameter("to");   if(to.empty())  to  ="2099-12-31";
@@ -112,11 +108,11 @@ void ReportController::revenueByStore(const HttpRequestPtr& req, std::function<v
         "GROUP BY st.store_id,st.store_address ORDER BY total_revenue DESC",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["store_id"]=row["store_id"].as<int>();
                 o["store"]=row["store_address"].as<std::string>();
                 o["revenue"]=row["total_revenue"].as<double>();
-                o["tx_count"]=row["tx_count"].as<long long>();
+                o["tx_count"]=static_cast<Json::Int64>(row["tx_count"].as<long long>());
                 o["avg_check"]=row["avg_check"].as<double>();
                 arr.append(o);}
             auto resp=HttpResponse::newHttpJsonResponse(arr);resp->addHeader("Access-Control-Allow-Origin","*");cb(resp);},
@@ -124,7 +120,6 @@ void ReportController::revenueByStore(const HttpRequestPtr& req, std::function<v
         from,to,payment);
 }
 
-// ── Отчёт 5: Топ клиентов (представление №2 из отчёта)
 void ReportController::topCustomers(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& cb){
     std::string from=req->getParameter("from"); if(from.empty())from="2024-01-01";
     std::string to  =req->getParameter("to");   if(to.empty())  to  ="2099-12-31";
@@ -140,10 +135,10 @@ void ReportController::topCustomers(const HttpRequestPtr& req, std::function<voi
         "ORDER BY total_amount DESC LIMIT $3::int",
         [cb](const orm::Result& r){
             Json::Value arr(Json::arrayValue);
-            for(auto& row:r){Json::Value o;
+            for(const auto& row:r){Json::Value o;
                 o["fio"]=row["client_fio"].isNull()?"":row["client_fio"].as<std::string>();
                 o["phone"]=row["client_phone"].as<std::string>();
-                o["count"]=row["purchase_count"].as<long long>();
+                o["count"]=static_cast<Json::Int64>(row["purchase_count"].as<long long>());
                 o["total"]=row["total_amount"].as<double>();
                 o["avg"]=row["avg_check"].as<double>();
                 arr.append(o);}
