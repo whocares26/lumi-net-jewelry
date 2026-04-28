@@ -43,6 +43,10 @@ INSERT INTO SUPPLIER (supplier_name, supplier_email, supplier_phone) VALUES
   ('АО "Серебряный Берег"', 'info@silver-shore.ru',      '+7 (495) 200-00-02'),
   ('ИП "Бриллиант Удачи"',  'order@brillant.ru',         '+7 (495) 200-00-03');
 
+-- Auto-increment sequence for product_article
+CREATE SEQUENCE IF NOT EXISTS product_article_seq START 100021 OWNED BY PRODUCT.product_article;
+ALTER TABLE PRODUCT ALTER COLUMN product_article SET DEFAULT nextval('product_article_seq');
+
 -- ─── Products ────────────────────────────────────────────────
 INSERT INTO PRODUCT (product_article, product_category, product_price, product_name) VALUES
   (100001, 'Кольца',    25000, 'Кольцо "Романтика" (золото 585)'),
@@ -184,3 +188,12 @@ INSERT INTO app_users (username, password_hash, role, ref_snils, ref_client_id) 
 
 -- idx_sale_date (per отчёт)
 CREATE INDEX IF NOT EXISTS idx_sale_date ON SALE (sale_date);
+
+-- Sequence (idempotent fallback)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname='product_article_seq') THEN
+    CREATE SEQUENCE product_article_seq START 100021 OWNED BY PRODUCT.product_article;
+    ALTER TABLE PRODUCT ALTER COLUMN product_article SET DEFAULT nextval('product_article_seq');
+  END IF;
+  PERFORM setval('product_article_seq', COALESCE((SELECT MAX(product_article) FROM PRODUCT),100020)+1);
+END $$;

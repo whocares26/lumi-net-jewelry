@@ -20,6 +20,7 @@ set(SOURCES
     src/controllers/ClientController.cc
     src/controllers/SupplierController.cc
     src/controllers/ReviewController.cc
+    src/controllers/InfoController.cc
 )
 
 add_executable(lumi_backend ${SOURCES})
