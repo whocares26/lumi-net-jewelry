@@ -1,7 +1,7 @@
 # LUMI·NET — ИС для сети ювелирных магазинов
 
 ## Стек
-- **Backend**: C++17 / Drogon 1.8+
+- **Backend**: C++23 / Drogon 1.8+
 - **База данных**: PostgreSQL 15
 - **Frontend**: Vanilla JS SPA + Nginx
 - **Оркестрация**: Docker Compose
