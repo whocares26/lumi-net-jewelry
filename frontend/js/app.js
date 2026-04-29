@@ -276,7 +276,7 @@ async function pgSales(fromVal='',toVal='',storeIdParam=''){
       ROLE==='ADMIN'?get('/stores'):Promise.resolve([])]);
     salesData=data;salesPage=1;
     const storeOpts=stores.map(s=>`<option value="${s.id}" ${s.id==storeIdParam?'selected':''}>${esc(s.address)}</option>`).join('');
-    const canAdd=ROLE==='ADMIN'||ROLE==='CASHIER';
+    const canAdd=false; // продажа оформляется только через pgSaleNew
     setPage(`
     <div id="page-alert"></div>
     <div class="card" style="padding:14px 20px;margin-bottom:0">
@@ -344,8 +344,13 @@ let foundClient=null;
 async function pgSaleNew(){
   try{
     const storeId=MY_STORE?MY_STORE.id:'';
-    const products=await get('/products',{store_id:storeId});
+    const [products, allClients]=await Promise.all([
+      get('/products',{store_id:storeId}),
+      get('/clients')
+    ]);
     saleCartItems=[];foundClient=null;
+    // Сохраняем для autocomplete
+    window._allClients=allClients;
     const prodOpts=products.map(p=>`<option value="${p.article}" data-price="${p.price}" data-name="${esc(p.name)}" data-stock="${p.stock_quantity||0}">${esc(p.name)} [арт.${p.article}] — ${fmtMoney(p.price)} (ост:${p.stock_quantity||0})</option>`).join('');
     setPage(`
     <div id="page-alert"></div>
@@ -396,7 +401,10 @@ async function searchClientByPhone(){
   try{
     const clients=await get('/clients',{search:phone});
     if(!clients.length){
-      el.innerHTML=`<div class="alert alert-err">Клиент с телефоном "${esc(phone)}" не найден. <a href="#" onclick="showRegForm()" style="color:var(--gold)">Зарегистрировать?</a></div>`;
+      el.innerHTML=`<div class="alert alert-err" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Клиент не найден: <b>${esc(phone)}</b></span>
+      <button class="btn btn-outline btn-xs" onclick="modalRegisterClient('${esc(phone).replace(/'/g,'\'')}')">+ Зарегистрировать</button>
+    </div>`;
       foundClient=null;return;}
     foundClient=clients[0];
     el.innerHTML=`<div class="alert alert-ok" style="display:flex;justify-content:space-between;align-items:center">
@@ -818,7 +826,7 @@ async function pgOrders(statusF='',suppF='',storeF=''){
     <div class="card" style="padding:14px 20px;margin-bottom:0">
       <div class="filters">
         <div class="filter-group"><label>Статус</label>
-          <select id="or-status">${statuses.map(s=>`<option ${s===statusF?'selected':''}>${s||'Все статусы'}</option>`).join('')}</select></div>
+          <select id="or-status">${statuses.map(s=>`<option value="${s}" ${s===statusF?'selected':''}>${s||'Все статусы'}</option>`).join('')}</select></div>
         <div class="filter-group"><label>Поставщик</label>
           <select id="or-supp"><option value="">Все поставщики</option>${suppOpts}</select></div>
         ${ROLE==='ADMIN'?`<div class="filter-group"><label>Магазин</label>
@@ -1093,16 +1101,27 @@ async function pgReviews(){
     </div>`);
   }catch(e){setPage(`<div class="alert alert-err">${esc(e.message)}</div>`);}
 }
-function modalAddReview(){
+async function modalAddReview(){
+  let storeOpts='<option value="">— Выберите магазин —</option>';
+  try{
+    const stores=await get('/stores');
+    storeOpts+=stores.map(s=>`<option value="${s.id}">${esc(s.address)}</option>`).join('');
+  }catch(e){}
   openModal('Оставить отзыв',`
+    <div class="form-group"><label>Магазин *</label>
+      <select id="rv-store">${storeOpts}</select>
+      <div style="font-size:11px;color:var(--smoke);margin-top:4px">Укажите магазин, в котором совершали покупку</div>
+    </div>
     <div class="form-group"><label>Рейтинг</label>
       <select id="rv-rating">
-        <option value="5">★★★★★ Отлично</option><option value="4">★★★★☆ Хорошо</option>
-        <option value="3">★★★☆☆ Средне</option><option value="2">★★☆☆☆ Плохо</option>
-        <option value="1">★☆☆☆☆ Ужасно</option>
+        <option value="5">★★★★★ — Отлично</option>
+        <option value="4">★★★★☆ — Хорошо</option>
+        <option value="3">★★★☆☆ — Средне</option>
+        <option value="2">★★☆☆☆ — Плохо</option>
+        <option value="1">★☆☆☆☆ — Ужасно</option>
       </select></div>
     <div class="form-group"><label>Комментарий</label>
-      <textarea id="rv-comment" placeholder="Поделитесь впечатлениями..."></textarea></div>`,
+      <textarea id="rv-comment" placeholder="Поделитесь впечатлениями о товарах и обслуживании..."></textarea></div>`,
     `<button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
      <button class="btn btn-primary" onclick="submitReview()">Отправить</button>`);
 }
@@ -1110,9 +1129,14 @@ async function submitReview(){
   const rating=parseInt(document.getElementById('rv-rating').value);
   const comment=document.getElementById('rv-comment').value;
   const clientId=parseInt(REF);
+  const storeEl=document.getElementById('rv-store');
+  const storeId=storeEl?parseInt(storeEl.value)||0:0;
   if(!clientId)return alert('Ошибка: не определён клиент');
-  try{await post('/reviews',{client_id:clientId,rating,comment});closeModal();pgReviews();}
-  catch(e){alert(e.message);}
+  if(storeEl&&!storeId)return alert('Выберите магазин');
+  try{
+    await post('/reviews',{client_id:clientId,rating,comment,store_id:storeId||null});
+    closeModal();pgReviews();
+  }catch(e){alert(e.message);}
 }
 async function deleteReview(id){
   if(!confirm('Удалить отзыв?'))return;
@@ -1481,9 +1505,98 @@ async function runReportTop(){
         <div class="chart-bar-row">
           <div class="chart-bar-label">${esc((d.fio||'—').split(' ')[0])}</div>
           <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.round(d.total/maxTotal*100)}%">${fmtMoney(d.total)}</div></div>
-          <div class="chart-bar-val">${fmt(d.count)} поk.</div>
+          <div class="chart-bar-val">${fmt(d.count)} пок.</div>
         </div>`).join('')}</div>`;
   }catch(e){el.innerHTML=`<div class="alert alert-err">${esc(e.message)}</div>`;}
+}
+
+
+
+// ── Маска ввода телефона ──────────────────────────────────────
+function phoneInputMask(input){
+  // Оставляем только цифры
+  let digits = input.value.replace(/\D/g,'');
+  // Если начинается с 8 — заменяем на 7
+  if(digits.startsWith('8')) digits='7'+digits.slice(1);
+  // Если начинается не с 7 — добавляем
+  if(digits.length>0 && digits[0]!=='7') digits='7'+digits;
+  // Обрезаем до 11 цифр
+  digits=digits.slice(0,11);
+  // Форматируем
+  let formatted='';
+  if(digits.length>=1)  formatted='+7';
+  if(digits.length>1)   formatted+=' ('+digits.slice(1,4);
+  if(digits.length>=4)  formatted+=')';
+  if(digits.length>4)   formatted+=' '+digits.slice(4,7);
+  if(digits.length>7)   formatted+='-'+digits.slice(7,9);
+  if(digits.length>9)   formatted+='-'+digits.slice(9,11);
+  input.value=formatted;
+  // Автопоиск когда введены все 11 цифр
+  if(digits.length===11){
+    setTimeout(()=>searchClientByPhone(),300);
+  }
+}
+
+// ── Live client search (autocomplete по телефону) ────────────
+function liveClientSearch(val){
+  const list=document.getElementById('sn-phone-list');
+  if(!list)return;
+  const clients=window._allClients||[];
+  const q=val.replace(/\D/g,'');
+  const matches=clients.filter(c=>c.phone.replace(/\D/g,'').includes(q)||
+    (c.fio&&c.fio.toLowerCase().includes(val.toLowerCase()))).slice(0,10);
+  list.innerHTML=matches.map(c=>`<option value="${c.phone}">${c.phone}${c.fio?' — '+c.fio:''}</option>`).join('');
+  // Если точное совпадение — авто-выбрать
+  const exact=clients.find(c=>c.phone===val);
+  if(exact){
+    foundClient=exact;
+    const el=document.getElementById('sn-client-info');
+    if(el)el.innerHTML=`<div class="alert alert-ok" style="display:flex;justify-content:space-between;align-items:center">
+      <span>✓ <b>${esc(exact.fio||'Клиент')}</b> — ${esc(exact.phone)}</span>
+      <span style="font-size:11px;color:var(--success)">ID: ${exact.id}</span></div>`;
+  } else if(foundClient&&foundClient.phone!==val){
+    foundClient=null;
+    const el=document.getElementById('sn-client-info');
+    if(el&&val.length>5)el.innerHTML='';
+  }
+}
+
+// ── Модал быстрой регистрации клиента (для кассира) ──────────
+function modalRegisterClient(prefillPhone=''){
+  openModal('Быстрая регистрация клиента',`
+    <div class="form-group"><label>ФИО</label>
+      <input id="mr-fio" type="text" placeholder="Фамилия Имя Отчество"></div>
+    <div class="form-group"><label>Телефон</label>
+      <input id="mr-phone" type="text" value="${esc(prefillPhone)}" placeholder="+7 (XXX) XXX-XX-XX"></div>
+    <div class="form-group"><label>Email (необязательно)</label>
+      <input id="mr-email" type="email" placeholder="email@example.com"></div>
+    <div style="font-size:12px;color:var(--smoke);margin-top:-8px">
+      Клиент будет зарегистрирован в системе без создания личного кабинета.</div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+     <button class="btn btn-primary" onclick="quickRegisterClient()">Зарегистрировать</button>`);
+}
+async function quickRegisterClient(){
+  const fio  =document.getElementById('mr-fio').value.trim();
+  const phone=document.getElementById('mr-phone').value.trim();
+  const email=document.getElementById('mr-email').value.trim();
+  if(!phone)return alert('Укажите телефон');
+  try{
+    // Создаём клиента напрямую через API
+    const d=await post('/auth/register',{
+      fio, phone, email,
+      username:'client_'+Date.now(),
+      password:'auto_'+Math.random().toString(36).slice(2,8)
+    });
+    closeModal();
+    // Обновляем список клиентов
+    window._allClients=await get('/clients').catch(()=>window._allClients||[]);
+    // Ставим найденного клиента
+    foundClient={id:d.client_id,fio,phone,email};
+    const el=document.getElementById('sn-phone');
+    if(el)el.value=phone;
+    const info=document.getElementById('sn-client-info');
+    if(info)info.innerHTML=`<div class="alert alert-ok">✓ Клиент <b>${esc(fio||phone)}</b> зарегистрирован</div>`;
+  }catch(e){alert('Ошибка регистрации: '+e.message);}
 }
 
 // ── Init ─────────────────────────────────────────────────────

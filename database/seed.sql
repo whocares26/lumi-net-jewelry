@@ -197,3 +197,13 @@ DO $$ BEGIN
   END IF;
   PERFORM setval('product_article_seq', COALESCE((SELECT MAX(product_article) FROM PRODUCT),100020)+1);
 END $$;
+
+-- Миграция: добавить store_id в REVIEW (если не существует)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name='review' AND column_name='store_id'
+  ) THEN
+    ALTER TABLE REVIEW ADD COLUMN store_id INT4 REFERENCES STORE(store_id) ON DELETE SET NULL;
+  END IF;
+END $$;
