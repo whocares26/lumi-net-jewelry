@@ -81,7 +81,7 @@ async function doRegister(){
   const email=document.getElementById('ru-email').value.trim();
   if(!fio||!phone||!uname||!pass)return showAuthErr('Заполните обязательные поля');
   try{
-    const d=await post('/auth/register',{fio,phone,username:uname,password:pass,email});
+    const d=await post('/auth/register',{fio,phone:formatPhoneForDB(phone),username:uname,password:pass,email});
     TOKEN=d.token;ROLE=d.role;REF=String(d.client_id);USER_ID=d.user_id;
     localStorage.setItem('lumi_token',TOKEN);
     localStorage.setItem('lumi_role',ROLE);
@@ -1511,6 +1511,15 @@ async function runReportTop(){
 }
 
 
+function formatPhoneForDB(raw) {
+  const d = raw.replace(/\D/g, '');
+  const s = d.startsWith('8') ? '7' + d.slice(1) : d;
+  const n = s.startsWith('7') ? s : '7' + s;
+  const t = n.slice(0, 11);
+  if (t.length < 11) return raw; // не трогаем если неполный
+  return `+7 (${t.slice(1,4)}) ${t.slice(4,7)}-${t.slice(7,9)}-${t.slice(9,11)}`;
+}
+
 
 // ── Маска ввода телефона ──────────────────────────────────────
 function phoneInputMask(input){
@@ -1567,7 +1576,7 @@ function modalRegisterClient(prefillPhone=''){
     <div class="form-group"><label>ФИО</label>
       <input id="mr-fio" type="text" placeholder="Фамилия Имя Отчество"></div>
     <div class="form-group"><label>Телефон</label>
-      <input id="mr-phone" type="text" value="${esc(prefillPhone)}" placeholder="+7 (XXX) XXX-XX-XX"></div>
+      <input id="mr-phone" type="tel" value="${esc(prefillPhone)}" placeholder="+7 (XXX) XXX-XX-XX" maxlength="18" oninput="phoneInputMask(this)" autocomplete="off">
     <div class="form-group"><label>Email (необязательно)</label>
       <input id="mr-email" type="email" placeholder="email@example.com"></div>
     <div style="font-size:12px;color:var(--smoke);margin-top:-8px">
@@ -1583,7 +1592,7 @@ async function quickRegisterClient(){
   try{
     // Создаём клиента напрямую через API
     const d=await post('/auth/register',{
-      fio, phone, email,
+      fio, phone: formatPhoneForDB(phone), email,
       username:'client_'+Date.now(),
       password:'auto_'+Math.random().toString(36).slice(2,8)
     });

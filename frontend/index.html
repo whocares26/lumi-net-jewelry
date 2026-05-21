@@ -168,7 +168,7 @@ textarea{resize:vertical;min-height:80px}
     <div id="auth-reg-form" style="display:none">
       <div class="form-row">
         <div class="form-group"><label>ФИО</label><input id="ru-fio" type="text" placeholder="Фамилия Имя Отчество"></div>
-        <div class="form-group"><label>Телефон</label><input id="ru-phone" type="text" placeholder="+7 (XXX) XXX-XX-XX"></div>
+        <input id="ru-phone" type="tel" placeholder="+7 (XXX) XXX-XX-XX" maxlength="18" oninput="phoneInputMask(this)" autocomplete="off">
       </div>
       <div class="form-row">
         <div class="form-group"><label>Логин</label><input id="ru-user" type="text" placeholder="username"></div>
