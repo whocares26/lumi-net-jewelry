@@ -46,8 +46,8 @@ void ReviewController::create(const HttpRequestPtr& req,
     std::function<void(const HttpResponsePtr&)>&& cb){
     auto b=req->getJsonObject();
     if(!b) return cb(jsonErr("JSON required"));
-    int  clientId = (*b)["client_id"].asInt();
-    int  rating   = (*b)["rating"].asInt();
+    int   clientId = (*b)["client_id"].asInt();
+    short rating   = static_cast<short>((*b)["rating"].asInt());
     std::string comment = (*b).get("comment","").asString();
     // store_id опциональный
     bool hasStore = (*b).isMember("store_id") && !(*b)["store_id"].isNull()
